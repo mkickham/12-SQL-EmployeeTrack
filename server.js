@@ -89,5 +89,28 @@ function viewAllDepartments() {
 }
 
 function viewAllRoles() {
-    
+    const query = "SELECT roles.title roles.id departments.department_name, roles.salary from roles join departments on roles.department_id = departments.id";
+    connection.query(query, (err, res) => {
+        if (err) throw err;
+        console.table(res);
+        start();
+    });
+}
+
+function viewAllEmployees() {
+    const query = "SELECT e.id, e.first_name, e.last_name, r.title, d.department_name, r.salary"
+    connection.query(query, (err, res) => {
+        if (err) throw err;
+        console.table(res)
+        start();
+    });
+}
+
+function addDepartment() {
+    inquirer
+        .prompt({
+            type: "input",
+            name: "name",
+            message: "Enter the name of the department"
+        })
 }
