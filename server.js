@@ -418,6 +418,38 @@ function deleteDepartmentRolesEmployeees() {
         .then((answer) => {
             switch (answer.data) {
                 case "Employee":
+                    deleteEmployee();
+                    break;
+                case "Role":
+                    deleteRole();
+                    break;
+                case "Department":
+                    deleteDepartment();
+                    break;
+                default:
+                    console.log('Invalid information')
+                    start();
+                    break;
             }
+            
         })
+}
+
+function deleteEmployee() {
+    const query = "SELECT * FROM employee";
+    connection.query(query, (err, res) => {
+        if (err) throw err;
+        const employeeList = res.map((employee) => ({
+            name: `${employee.first_name}${employee.last_name}`,
+            value: employee.id,
+        }));
+        employeeList.push({ name: "Return", value: "back"});
+        inquirer
+            .prompt({
+                type: "list",
+                name: "id",
+                message: "Select an employee to terminate",
+                choices: employeeList,
+            })
+    })
 }
