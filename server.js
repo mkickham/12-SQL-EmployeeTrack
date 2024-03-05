@@ -2,12 +2,14 @@ const  inquirer = require("inquirer");
 const mysql = require("mysql2");
 const { deprecate } = require("util");
 
+require ("dotenv").config();
+
 const connection = mysql.createConnection({
     host: "localhost",
-    port: 3030,
+    port: 3306,
     user: "root",
-    password: "",
-    database: "employeeeTracker_db",
+    password: process.env.pw,
+    database: "employeeTracker_db",
 });
 
 connection.connect((err) => {
@@ -29,16 +31,12 @@ function start() {
                 "Add a department",
                 "Add a role",
                 "Add an employee",
-                "Add a manager",
                 "Update an Employee",
-                "Delete a department",
-                "Delete a role",
-                "Delete an employee",
                 "Cancel"
             ],
         })
         .then((answer) => {
-            switch (answer.action) {
+            switch (answer.start) {
                 case "View all departments":
                     viewAllDepartments();
                     break;
@@ -51,7 +49,7 @@ function start() {
                 case "Add a department":
                     addDepartment();
                     break;
-                case "Add a Role":
+                case "Add a role":
                     addRole();
                     break;
                 case "Add an employee":
@@ -90,7 +88,7 @@ function viewAllDepartments() {
 }
 
 function viewAllRoles() {
-    const query = "SELECT roles.title roles.id departments.department_name, roles.salary from roles join departments on roles.department_id = departments.id";
+    const query = "SELECT roles.title, roles.id, roles.salary, departments.department_name from roles join departments on roles.department_id = departments.id";
     connection.query(query, (err, res) => {
         if (err) throw err;
         console.table(res);
@@ -99,7 +97,7 @@ function viewAllRoles() {
 }
 
 function viewAllEmployees() {
-    const query = "SELECT e.id, e.first_name, e.last_name, r.title, d.department_name, r.salary"
+    const query = "SELECT employee.id, employee.first_name, employee.last_name, roles.title, roles.salary FROM employee JOIN roles on employee.role_id = roles.id"
     connection.query(query, (err, res) => {
         if (err) throw err;
         console.table(res)
@@ -117,16 +115,21 @@ function addDepartment() {
         .then((answer => {
             console.log(answer.name);
             const query = `INSERT INTO departments (department_name) VALUES ("${answer.name}")`;
+            connection.query(query, (err, res) => {
                 if (err) throw err;
-                console.log('Department added to the database')
+                console.table(res)
                 start();
+            });
         }));
 };
 
 function addRole() {
-    const query = "SELECT * FROM departments";
+    let depNames
+    const query = "SELECT department_name FROM departments";
     connection.query(query, (err, res) => {
         if (err) throw err;
+        [depNames] = res;
+    });
         inquirer
             .prompt([
                 {
@@ -140,26 +143,16 @@ function addRole() {
                     message: "Enter the salary"
                 },
                 {
-                    type: "list",
-                    name: "department",
-                    message: "Select the department for a new role",
-                    choices: res.map(
-                        (department) => department.department_name
-                    ),
+                    type: "input",
+                    name: "department_id",
+                    message: "Select the department_id for a new role",
+                    // choices: [...depNames]
                 },
             ])
             .then ((answers) => {
-                const department = res.find(
-                    (department) => department.name === answers.department
-                );
-                const query = "INSERT INTO roles SET";
+                const query = `INSERT INTO roles (title, salary, department_id) values ("${answers.title}", ${answers.salary}, ${answers.department_id})`;
                 connection.query(
                     query,
-                    {
-                        title: answers.title,
-                        salary: answers.salary,
-                        department_id: department,
-                    },
                     (err, res) => {
                         if (err) throw err;
                         console.log(
@@ -169,7 +162,7 @@ function addRole() {
                     }
                 );
             });
-    });
+
 }
 
 function addEmployee() {
@@ -179,7 +172,7 @@ function addEmployee() {
             return;
         }
 
-        const roles = results.map(({ id, title }) => ({
+        const [roles] = results.map(({ id, title }) => ({
                 name: title,
                 value: id,
         }));
@@ -191,10 +184,10 @@ function addEmployee() {
                     console.error(error);
                     return;
                 }
-            }
+
             
-            const managers = results.map(({ id, name }) => ({
-                name,
+            const [managers] = results.map(({ id, name }) => ({
+                name: name,
                 value: id
             }));
 
@@ -212,14 +205,15 @@ function addEmployee() {
                     },
                     {
                         type: "list",
-                        name: "roleID",
+                        name: "role_id",
                         message: "Select an employee role",
-                        choices: roles,
+                        choices: [...roles],
                     },
                     {
-                        type: Boolean,
-                        name: "managerID",
+                        type: "list",
+                        name: "manager_id",
                         message: "Is the employee a manager?",
+                        choices: [...managers]
                     }
                 ])
                 .then ((answers) => {
@@ -244,65 +238,8 @@ function addEmployee() {
                     console.error(error);
                 });
             }
+            
         )
-}
-
-function addManager() {
-    const queryDepartments = "SELECT * FROM departments";
-    const queryEmployees = "SELECT * FROM employee";
-
-    connection.query(queryDepartments, (err, resDepartments) => {
-        if (err) throw err;
-        connection.query(queryEmployees, (err, resEmployees) => {
-            if (err) throw err;
-            inquirer
-                .prompt([
-                    {
-                        type: "list",
-                        name: "department",
-                        message: "Select a department",
-                        choices: resDepartments.map(
-                            (department) => department.department_name
-                        ),
-                    },
-                    {
-                        type: "list",
-                        name: "employee",
-                        message: "Select the employee to become a manager",
-                        choices: resEmployees.map(
-                            (employee) =>
-                                `${employee.first_name} ${employee.last_name}`
-                        ),
-                    },
-                ])
-                .then((answers) => {
-                    const department = resDepartments.find(
-                        (department) =>
-                        department.department_name === answers.department
-                    );
-                    const employee = resEmployees.find(
-                        (employee) =>
-                        `${employee.first_name}${employee.last_name}` ===
-                        answers.employee
-                    );
-                    const manager = resEmployees.find(
-                        (employee) =>
-                        `${employee.first_name}${employee.last_name}` ===
-                        answers.manager
-                    );
-                    const query = 
-                        "UPDATE employee SET manager_id = > WHERE id = ? AND role_id IN (SELECT id FROM roles WHERE department_id = ?)";
-                        connection.query(
-                            query,
-                            [manager.id, employee.id, department.id],
-                            (err, res) => {
-                                if (err) throw err;
-                                console.log("Added manager");
-                                start();
-                            }
-                        )
-                })
-        })
     })
 }
 
@@ -405,51 +342,4 @@ function viewEmployeesByDepartment() {
         console.table(res);
         start();
     });
-}
-
-function deleteDepartmentRolesEmployeees() {
-    inquirer
-        .prompt({
-            type: "list",
-            name: "data",
-            message: "Select to delete:",
-            choices: ["Employee", "Role", "Department"],
-        })
-        .then((answer) => {
-            switch (answer.data) {
-                case "Employee":
-                    deleteEmployee();
-                    break;
-                case "Role":
-                    deleteRole();
-                    break;
-                case "Department":
-                    deleteDepartment();
-                    break;
-                default:
-                    console.log('Invalid information')
-                    start();
-                    break;
-            }
-            
-        })
-}
-
-function deleteEmployee() {
-    const query = "SELECT * FROM employee";
-    connection.query(query, (err, res) => {
-        if (err) throw err;
-        const employeeList = res.map((employee) => ({
-            name: `${employee.first_name}${employee.last_name}`,
-            value: employee.id,
-        }));
-        employeeList.push({ name: "Return", value: "back"});
-        inquirer
-            .prompt({
-                type: "list",
-                name: "id",
-                message: "Select an employee to terminate",
-                choices: employeeList,
-            })
-    })
 }
