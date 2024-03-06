@@ -1,6 +1,5 @@
 const  inquirer = require("inquirer");
 const mysql = require("mysql2");
-const { deprecate } = require("util");
 
 require ("dotenv").config();
 
@@ -172,13 +171,13 @@ function addEmployee() {
             return;
         }
 
-        const [roles] = results.map(({ id, title }) => ({
+        const roles = results.map(({ id, title }) => ({
                 name: title,
                 value: id,
         }));
 
         connection.query(
-            'SELECT id CONCAT(first_name, "", last_name) AS name FROM employee',
+            'SELECT id, CONCAT(first_name, " ", last_name) AS name FROM employee',
             (error, results) => {
                 if (error) {
                     console.error(error);
@@ -186,7 +185,7 @@ function addEmployee() {
                 }
 
             
-            const [managers] = results.map(({ id, name }) => ({
+            const managers = results.map(({ id, name }) => ({
                 name: name,
                 value: id
             }));
@@ -205,13 +204,13 @@ function addEmployee() {
                     },
                     {
                         type: "list",
-                        name: "role_id",
+                        name: "roleID",
                         message: "Select an employee role",
                         choices: [...roles],
                     },
                     {
                         type: "list",
-                        name: "manager_id",
+                        name: "managerID",
                         message: "Is the employee a manager?",
                         choices: [...managers]
                     }
@@ -243,7 +242,7 @@ function addEmployee() {
     })
 }
 
-function updateEmployeeRole(){
+function updateEmployee(){
     const queryEmployees = 
         "SELECT employee.id, employee.first_name, employee.last_name, roles.title FROM employee LEFT JOIN roles ON employee.role_id = roles.id"
     const queryRoles = "SELECT * FROM roles";
@@ -259,7 +258,7 @@ function updateEmployeeRole(){
                         message: "Select an employee to update",
                         choices: resEmployees.map(
                             (employee) => 
-                                `${employee.first_name}${employee.last_name}`
+                                `${employee.first_name} ${employee.last_name}`
                         ),
                     },
                     {
@@ -278,8 +277,7 @@ function updateEmployeeRole(){
                     const role = resRoles.find(
                         (role) => role.title === answers.role
                     );
-                    const query = 
-                        "UPDATE employee SET role_id = > WHERE id = >";
+                    const query = "UPDATE employee SET role_id = ? WHERE id = ?";
                     connection.query(
                         query,
                         [role.id, employee.id],
@@ -291,55 +289,5 @@ function updateEmployeeRole(){
                     );
                 });
         });
-    });
-}
-
-function viewEmployeesByManager() {
-    const query = `SELECT 
-    e.id, e.first_name,
-    e.last_name, 
-    r.title, 
-    d.department_name, 
-    CONCAT(m.first_name, '', m.last_name) AS manager_name 
-    FROM employee e INNER JOIN roles r ON e.role_id = r.id
-    LEFT JOIN employee m ON e.manager_id = m.id
-    ORDER BY manager_name,
-    e.last_name,
-    e.first_name`;
-
-    connection.query(query, (err, res) => {
-        if (err) throw err;
-        const viewEmployeesByManager = res.reduce((acc, cur) => {
-            const managerName = cur.manager_name;
-            if (acc[managerName]) {
-                acc[managerName].push(cur);
-            } else {
-                acc[managerName] = [cur];
-            }
-            return acc;
-        }, {});
-    })
-
-    console.log("Employees as Managers");
-    for (const managerName in EmployeesByManager) {
-        console.log(`n${managerName}`);
-        const employees = EmployeesByManager[managerName];
-        employeess.forEach((employee) => {
-            console.log(
-                `${employee.first_name}${employee.last_name} - ${employee.title} - ${employee.department_name}`
-            );
-        });
-    }
-    start();
-}
-
-function viewEmployeesByDepartment() {
-    const query = "SELECT departments.department_name, employee.first_name, employee.last_name FROM employeee INNER JOIN roles ON employee.role_id = roles.id INNER JOIN departments ON roles.department_id = departments.id ORDER BY departments.department_name";
-
-    connection.query(query, (err, res) => {
-        if (err) throw err;
-        console.log("\nEmployees by department");
-        console.table(res);
-        start();
     });
 }
