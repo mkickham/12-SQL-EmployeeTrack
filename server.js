@@ -209,10 +209,10 @@ function addEmployee() {
                         choices: [...roles],
                     },
                     {
-                        type: "list",
-                        name: "managerID",
+                        type: "confirm",
+                        name: "manager_id",
                         message: "Is the employee a manager?",
-                        choices: [...managers]
+                        choices: managers,
                     }
                 ])
                 .then ((answers) => {
@@ -222,8 +222,12 @@ function addEmployee() {
                         answers.firstName,
                         answers.lastName,
                         answers.roleID,
-                        answers.managerID,
+                        answers.manager || answers.manager_id,
                     ];
+
+                    console.log("SQL Query:", sql);
+                    console.log("Values", values);
+
                     connection.query(sql, values, (error) => {
                         if (error) {
                             console.error(error);
