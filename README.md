@@ -36,6 +36,10 @@ THEN I am prompted to enter the employee’s first name, last name, role, and ma
 WHEN I choose to update an employee role
 THEN I am prompted to select an employee to update and their new role and this information is updated in the database 
 
-## Repository Link
+## Repository Link:
+
+https://github.com/mkickham/12-SQL-EmployeeTrack 
 
 ## Screencastify Link:
+
+https://app.screencastify.com/v3/watch/MPJOCELSobRaX8jY0lCt 
